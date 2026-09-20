@@ -189,6 +189,7 @@ Options:
   comma separated list of phases to run. Default is: kexec,disko,install,reboot
   kexec: kexec into the nixos installer
   disko: first unmount and destroy all filesystems on the disks we want to format, then run the create and mount mode
+    and finally switch on any swap partition that exists afterwards
   install: install the system
   reboot: unmount the filesystems, export any ZFS pools and reboot the machine
 * --disko-mode disko|mount|format
@@ -858,6 +859,25 @@ runDisko() {
 
   step Formatting hard drive with disko
   runSsh "$diskoScript"
+
+  step Enabling swap
+  # Swap created by disko is not necessarily active afterwards, i.e. when only
+  # formatting or when disko is run again on an already running installer.
+  # Having it on gives the installation some extra memory to work with.
+  runSsh sh <<SSH
+set -eu ${enableDebug}
+export PATH="\$PATH:/run/current-system/sw/bin"
+# -c /dev/null makes sure we probe the devices instead of trusting a cache
+# that might predate disko
+blkid -c /dev/null -t TYPE=swap -o device | while read -r device; do
+  # deactivate first, so that re-running this is idempotent no matter whether
+  # the device was already swapped on before
+  if swapon --show=NAME --noheadings | grep -qxF "\$(readlink -f "\$device")"; then
+    swapoff "\$device"
+  fi
+  swapon "\$device"
+done
+SSH
 }
 
 nixosInstall() {

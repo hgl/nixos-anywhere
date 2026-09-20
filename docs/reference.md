@@ -85,6 +85,7 @@ Options:
   comma separated list of phases to run. Default is: kexec,disko,install,reboot
   kexec: kexec into the nixos installer
   disko: first unmount and destroy all filesystems on the disks we want to format, then run the create and mount mode
+    and finally switch on any swap partition that exists afterwards
   install: install the system
   reboot: unmount the filesystems, export any ZFS pools and reboot the machine
 * --disko-mode disko|mount|format
